@@ -2,6 +2,7 @@ module bounce_top(
     input clk,              	// W5 100MHz Clock
     input reset,           	// T17 - To Reset
     input btn,        		// T18 - To Jump
+    input [1:0] speed,
     output hsync,           	// to VGA Connector
     output vsync,           	// to VGA Connector
     output [11:0] rgb       	// to DAC, to VGA Connector
@@ -28,21 +29,21 @@ module bounce_top(
     
     
     // Module Instantiations
-    vga_controller vga_unit(	.clk_100MHz(clk), .reset(reset), .video_on(w_vid_on),
+    vga_controller_test vga_unit(	.clk_100MHz(clk), .reset(reset), .video_on(w_vid_on),
         			.hsync(hsync), .vsync(vsync), .p_tick(w_p_tick),
         			.x(w_x), .y(w_y));
     
-    bounce_text text_unit(	.clk(clk), .x(w_x), .y(w_y), .dig0(dig0), .dig1(dig1),
+    bounce_text_test text_unit(	.clk(clk), .x(w_x), .y(w_y), .dig0(dig0), .dig1(dig1),
         			.ball(ball_reg), .text_on(text_on), .text_rgb(text_rgb));
         
-    bounce_graph graph_unit(	.clk(clk), .reset(reset), .btn(btn), .gra_still(gra_still),
+    bounce_graph_test graph_unit(	.clk(clk), .reset(reset), .btn(btn), .gra_still(gra_still),
         			.video_on(w_vid_on), .x(w_x), .y(w_y), .hit(hit),
-       				.miss(miss), .graph_on(graph_on), .graph_rgb(graph_rgb));
+       				.miss(miss), .graph_on(graph_on), .graph_rgb(graph_rgb), .speed(speed));
     
-    timer timer_unit(	.clk(clk), .reset(reset), .timer_tick(timer_tick),
+    timer_test timer_unit(	.clk(clk), .reset(reset), .timer_tick(timer_tick),
         		.timer_start(timer_start),.timer_up(timer_up));
 
-    m100_counter counter_unit(	.clk(clk), .reset(reset), .d_inc(d_inc),
+    m100_counter_test counter_unit(	.clk(clk), .reset(reset), .d_inc(d_inc),
         			.d_clr(d_clr), .dig0(dig0), .dig1(dig1));
 
     // 60 Hz tick when screen is refreshed
