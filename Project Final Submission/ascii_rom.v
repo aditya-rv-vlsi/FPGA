@@ -1,5 +1,4 @@
 // *************************************************************
-// Created by David J. Marion aka FPGA Dude
 // A ROM containing patterns for ASCII values.
 //
 // Non-printable characters 00 - 1f, and 7f
