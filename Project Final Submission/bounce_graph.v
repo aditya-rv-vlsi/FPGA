@@ -3,6 +3,7 @@ module bounce_graph(
     input reset,    
     input btn,        
     input gra_still,        // still graphics - newgame, game over states
+    input [1:0] speed,
     input video_on,
     input [9:0] x,
     input [9:0] y,
@@ -21,20 +22,30 @@ module bounce_graph(
     
     //GROUND
     localparam rect_1_x1 = 0, rect_1_y1 = 260;
-    localparam rect_1_x2 = 305, rect_1_y2 = 480;
+    localparam rect_1_x2 = 145, rect_1_y2 = 480;
     wire rectangle_1_on = (x >= rect_1_x1) && (x <= rect_1_x2) &&
                           (y >= rect_1_y1) && (y <= rect_1_y2);
 
-    localparam rect_2_x1 = 335, rect_2_y1 = 260;
-    localparam rect_2_x2 = 640, rect_2_y2 = 480;
+    localparam rect_2_x1 = 170, rect_2_y1 = 260;
+    localparam rect_2_x2 = 305, rect_2_y2 = 480;
     wire rectangle_2_on = (x >= rect_2_x1) && (x <= rect_2_x2) &&
                           (y >= rect_2_y1) && (y <= rect_2_y2);
+                          
+    localparam rect_3_x1 = 335, rect_3_y1 = 260;
+    localparam rect_3_x2 = 470, rect_3_y2 = 480;
+    wire rectangle_3_on = (x >= rect_3_x1) && (x <= rect_3_x2) &&
+                          (y >= rect_3_y1) && (y <= rect_3_y2);
+                          
+    localparam rect_4_x1 = 500, rect_4_y1 = 260;
+    localparam rect_4_x2 = 640, rect_4_y2 = 480;
+    wire rectangle_4_on = (x >= rect_4_x1) && (x <= rect_4_x2) &&
+                          (y >= rect_4_y1) && (y <= rect_4_y2);
     
     parameter SQ_RGB = 12'hFF0;             // Yellow color for square (red & green)
     parameter BG_RGB = 12'h007;             // Blue background
     parameter RECT_RGB = 12'h0FF;           // Rectangle color (aqua)
     parameter SQUARE_SIZE = 64;             // Width of square sides in pixels
-    parameter SQUARE_VELOCITY_POS = 2;      // Positive direction velocity
+    parameter SQUARE_VELOCITY_POS =2 ;      // Positive direction velocity
     parameter SQUARE_VELOCITY_NEG = -2;     // Negative direction velocity
     
     // BALL
@@ -49,6 +60,7 @@ module bounce_graph(
     reg [7:0] rom_data;             		// data at current rom address
     wire rom_bit;                   		// signify when rom data is 1 or 0 
 						// for ball rgb control
+	reg [1:0] speed_neg;
     reg btn_prev, slow_counter;			// Register Control
     reg ball_reset; 				// New signal to trigger ball reset
 
@@ -68,7 +80,7 @@ module bounce_graph(
                 // Reset ball position when ball_reset is triggered
                 x_ball_reg <= 10;
                 y_ball_reg <= 252;
-                x_delta_reg <= SQUARE_VELOCITY_POS;
+                x_delta_reg <= speed;
                 y_delta_reg <= 10'h000;
             end
             else if (refresh_tick && (slow_counter == 0)) begin
@@ -143,13 +155,13 @@ module bounce_graph(
         ball_reset = 1'b0;  // Default: no reset
     
         if(gra_still) begin
-            x_delta_next = SQUARE_VELOCITY_POS;
+            x_delta_next = speed;
             y_delta_next = 0;
         end
     
         // Check if the ball falls into the pit
-        if((y_ball_t >= 252) && (x_ball_l >= 305) && (x_ball_r <= 335)) begin
-            y_delta_next = SQUARE_VELOCITY_POS+2;
+        if((y_ball_t >= 252) && (((x_ball_l >= 140) && (x_ball_r <= 170)) || ((x_ball_l >= 305) && (x_ball_r <= 335)) || ((x_ball_l >= 470) && (x_ball_r <= 500)))) begin
+            y_delta_next = speed+2;
             x_delta_next = 0;
             miss = 1'b1;
     
@@ -161,35 +173,35 @@ module bounce_graph(
             // Handle normal vertical movement (jump logic)
             if (btn_prev) begin
                 if (y_ball_t <= 212)                   	// Top of jump
-                    y_delta_next = SQUARE_VELOCITY_POS; // Start descending
+                    y_delta_next = speed; // Start descending
                 else if (y_ball_t >= 252)              	// Bottom of jump
-                    y_delta_next = SQUARE_VELOCITY_NEG; // Ascend
+                    y_delta_next = -1*speed; // Ascend
             end else begin
                 if (y_ball_t <= 212)                   	// Top of jump
-                    y_delta_next = SQUARE_VELOCITY_POS; // Descend
+                    y_delta_next = speed; // Descend
                 else if (y_ball_t >= 252) begin        	// Stop vertical movement at ground level
                     y_delta_next = 0;
-                    if ((y_ball_t >= 252) && !((x_ball_l > 305) && (x_ball_r < 335)))
+                    if ((y_ball_t >= 252) && (((x_ball_l >= 0) && (x_ball_r <= 145)) || ((x_ball_l >= 175) && (x_ball_r <= 305)) || ((x_ball_l >= 335) && (x_ball_r >= 470))))
                         hit = 1'b1;
                 end
             end
     
             if (x_ball_l <= 0)                         // Left boundary
-                x_delta_next = SQUARE_VELOCITY_POS;    // Move right
+                x_delta_next = speed;    // Move right
             else if (x_ball_l >= X_MAX - BALL_SIZE)    // Right boundary
-                x_delta_next = SQUARE_VELOCITY_NEG;    // Move left
+                x_delta_next = -1*speed;    // Move left
         end
     end
 
     // output status signal for graphics 
-    assign graph_on = rectangle_1_on | rectangle_2_on | ball_on;
+    assign graph_on = rectangle_1_on | rectangle_2_on | rectangle_3_on | rectangle_4_on | ball_on;
        
     // rgb multiplexing circuit
     always @*
         if(~video_on)
             graph_rgb = 12'h000;      // no value, blank
         else
-            if(rectangle_1_on || rectangle_2_on)
+            if(rectangle_1_on || rectangle_2_on || rectangle_3_on || rectangle_4_on)
                 graph_rgb = wall_rgb;     // wall color
             else if(ball_on)
                 graph_rgb = ball_rgb;     // ball color
